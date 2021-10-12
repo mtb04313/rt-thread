@@ -537,11 +537,13 @@ char *strdup(const char *s) __attribute__((alias("rt_strdup")));
  */
 void rt_show_version(void)
 {
+#if 0 // PSoC6: don't print version as it occur before retarget_io mutex is acquired
     rt_kprintf("\n \\ | /\n");
     rt_kprintf("- RT -     Thread Operating System\n");
     rt_kprintf(" / | \\     %d.%d.%d build %s\n",
                RT_VERSION, RT_SUBVERSION, RT_REVISION, __DATE__);
     rt_kprintf(" 2006 - 2020 Copyright by rt-thread team\n");
+#endif
 }
 RTM_EXPORT(rt_show_version);
 
@@ -1155,6 +1157,14 @@ RT_WEAK void rt_hw_console_output(const char *str)
 }
 RTM_EXPORT(rt_hw_console_output);
 
+
+// PSoC6 added
+#define USE_CY_PRINTF  1   // 1:enable; 0:disable
+
+#if USE_CY_PRINTF
+#include <stdio.h>
+#endif
+
 /**
  * This function will put string to the console.
  *
@@ -1163,6 +1173,11 @@ RTM_EXPORT(rt_hw_console_output);
 void rt_kputs(const char *str)
 {
     if (!str) return;
+
+#if USE_CY_PRINTF   // PSoC6 added
+    printf(str);
+
+#else
 
 #ifdef RT_USING_DEVICE
     if (_console_device == RT_NULL)
@@ -1180,6 +1195,8 @@ void rt_kputs(const char *str)
 #else
     rt_hw_console_output(str);
 #endif
+
+#endif // PSoC6 added
 }
 
 /**
@@ -1189,6 +1206,14 @@ void rt_kputs(const char *str)
  */
 void rt_kprintf(const char *fmt, ...)
 {
+#if USE_CY_PRINTF   // PSoC6 added
+    va_list args;
+
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
+
+#else
     va_list args;
     rt_size_t length;
     static char rt_log_buf[RT_CONSOLEBUF_SIZE];
@@ -1219,6 +1244,8 @@ void rt_kprintf(const char *fmt, ...)
     rt_hw_console_output(rt_log_buf);
 #endif
     va_end(args);
+
+#endif  // PSoC6 added
 }
 RTM_EXPORT(rt_kprintf);
 #endif
